@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
@@ -23,51 +24,62 @@ public class Astar
         //Add start node to the open list
         var startNode = new Node(startPos, null, 0, 0);
         openNodes.Add(startNode);
-        
-        var path = new List<Vector2Int>();
 
         Node currentNode;
 
         while (openNodes.Count > 0)
         {
-            currentNode = openNodes[0];
-            openNodes.Remove(currentNode);
-            closedNodes.Add(currentNode);
+            currentNode = openNodes.OrderBy(node => node.FScore).First();
 
             //Found Goal
             if (currentNode.position == endPos)
             {
-                return path;
+                return null;
             }
-
-            foreach (var node in openNodes)
-            {
-                if (node.FScore <= currentNode.FScore)
-                {
-                    if (node.HScore < currentNode.HScore)
-                    {
-                        currentNode = node;
-                    }
-                }
-            }
-
+            
             openNodes.Remove(currentNode);
             closedNodes.Add(currentNode);
-            
-            
+
+            foreach (var cell in grid)
+            {
+                if (openNodes.Any(node => node.position == cell.gridPosition))
+                {
+                    
+                }
+            }
         }
-        
-        return path;
+
+        return null;
+    }
+    
+    private List<Node> GetNeighbours(Node node, Vector2Int mazeSize)
+    {
+        var result = new List<Node>();
+        for (var x = -1; x < 1; x++)
+        {
+            for (var y = -1; y < 1; y++)
+            {
+                var nodeX = node.position.x + x;
+                var nodeY = node.position.y + y;
+                if (nodeX < 0 || nodeX >= mazeSize.x || nodeY < 0 || nodeY >= mazeSize.y || Mathf.Abs(x) == Mathf.Abs(y))
+                {
+                    continue;
+                }
+                //result.Add(candidateNode);
+            }
+        }
+        return result;
     }
 
-    private int GetGScore(Vector2Int startPos, Vector2Int endPos)
-    {
-        return 0;
-    }
+    private int GetDistance(Node nodeA, Node nodeB) {
+        var dstX = Mathf.Abs(nodeA.position.x - nodeB.position.x);
+        var dstY = Mathf.Abs(nodeA.position.y - nodeB.position.y);
 
-    private int GetFScore(Vector2Int startPos, Vector2Int endPos)
-    {
-        return 0;
+        if (dstX > dstY)
+        {
+            return 14 * dstY + 10 * (dstX - dstY);
+        }
+        return 14 * dstX + 10 * (dstY - dstX);
     }
 
     /// <summary>
@@ -83,7 +95,7 @@ public class Astar
         }
         public float GScore; //Current Travelled Distance
         public float HScore; //Distance estimated based on Heuristic
-
+        
         public Node() { }
         public Node(Vector2Int position, Node parent, int GScore, int HScore)
         {
