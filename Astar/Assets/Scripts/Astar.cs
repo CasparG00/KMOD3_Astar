@@ -14,9 +14,60 @@ public class Astar
     /// <param name="endPos"></param>
     /// <param name="grid"></param>
     /// <returns></returns>
+
+    private List<Node> openNodes = new List<Node>();
+    private List<Node> closedNodes = new List<Node>();
+
     public List<Vector2Int> FindPathToTarget(Vector2Int startPos, Vector2Int endPos, Cell[,] grid)
     {
-        return null;
+        //Add start node to the open list
+        var startNode = new Node(startPos, null, 0, 0);
+        openNodes.Add(startNode);
+        
+        var path = new List<Vector2Int>();
+
+        Node currentNode;
+
+        while (openNodes.Count > 0)
+        {
+            currentNode = openNodes[0];
+            openNodes.Remove(currentNode);
+            closedNodes.Add(currentNode);
+
+            //Found Goal
+            if (currentNode.position == endPos)
+            {
+                return path;
+            }
+
+            foreach (var node in openNodes)
+            {
+                if (node.FScore <= currentNode.FScore)
+                {
+                    if (node.HScore < currentNode.HScore)
+                    {
+                        currentNode = node;
+                    }
+                }
+            }
+
+            openNodes.Remove(currentNode);
+            closedNodes.Add(currentNode);
+            
+            
+        }
+        
+        return path;
+    }
+
+    private int GetGScore(Vector2Int startPos, Vector2Int endPos)
+    {
+        return 0;
+    }
+
+    private int GetFScore(Vector2Int startPos, Vector2Int endPos)
+    {
+        return 0;
     }
 
     /// <summary>
