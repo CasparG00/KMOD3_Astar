@@ -16,8 +16,8 @@ public class Astar
     /// <param name="grid"></param>
     /// <returns></returns>
 
-    private List<Node> openNodes = new List<Node>();
-    private List<Node> closedNodes = new List<Node>();
+    private List<Node> openNodes = new();
+    private HashSet<Node> closedNodes = new();
 
     public List<Vector2Int> FindPathToTarget(Vector2Int startPos, Vector2Int endPos, Cell[,] grid)
     {
@@ -25,26 +25,60 @@ public class Astar
         var startNode = new Node(startPos, null, 0, 0);
         openNodes.Add(startNode);
 
-        Node currentNode;
-
         while (openNodes.Count > 0)
         {
-            currentNode = openNodes.OrderBy(node => node.FScore).First();
+            var currentNode = openNodes.OrderBy(node => node.FScore).First();
+            Debug.Log(openNodes.Count);
 
             //Found Goal
             if (currentNode.position == endPos)
             {
-                return null;
+                var path = new List<Vector2Int>();
+                var currentPos = endPos;
+
+                while (currentPos != startPos)
+                {
+                    path.Add(currentPos);
+                    foreach (var node in closedNodes.Where(node => node.position == currentPos))
+                    {
+                        currentPos = node.parent.position;
+                    }
+                }
+
+                path.Reverse();
+                return path;
+            }
+
+            foreach (var node in openNodes)
+            {
+                if (!(node.FScore <= currentNode.FScore)) continue;
+                if (node.HScore < currentNode.HScore)
+                {
+                    currentNode = node;
+                }
             }
             
             openNodes.Remove(currentNode);
             closedNodes.Add(currentNode);
 
-            foreach (var cell in grid)
+            foreach (var neighbour in GetNeighbours(currentNode, new Vector2Int(grid.GetLength(0), grid.GetLength(1))))
             {
-                if (openNodes.Any(node => node.position == cell.gridPosition))
+                if (closedNodes.Any(node => node.position == neighbour.position))
                 {
-                    
+                    continue;
+                }
+
+                var newScore = currentNode.GScore + GetDistance(currentNode.position, neighbour.position);
+                if (!(newScore < neighbour.GScore) && openNodes.Any(node => node.position == neighbour.position)) continue;
+                {
+                    neighbour.GScore = newScore;
+                    neighbour.HScore = GetDistance(neighbour.position, endPos);
+                    neighbour.parent = currentNode;
+
+                    if (openNodes.All(node => node.position != neighbour.position))
+                    {
+                        openNodes.Add(neighbour);
+                    }
                 }
             }
         }
@@ -54,26 +88,32 @@ public class Astar
     
     private List<Node> GetNeighbours(Node node, Vector2Int mazeSize)
     {
-        var result = new List<Node>();
-        for (var x = -1; x < 1; x++)
+        var results = new List<Node>();
+        
+        for (var x = -1; x < 2; x++)
         {
-            for (var y = -1; y < 1; y++)
+            for (var y = -1; y < 2; y++)
             {
-                var nodeX = node.position.x + x;
-                var nodeY = node.position.y + y;
-                if (nodeX < 0 || nodeX >= mazeSize.x || nodeY < 0 || nodeY >= mazeSize.y || Mathf.Abs(x) == Mathf.Abs(y))
+                if (x == 0 && y == 0)
                 {
                     continue;
                 }
-                //result.Add(candidateNode);
+                var nodeX = node.position.x + x;
+                var nodeY = node.position.y + y;
+                
+                if (nodeX < 0 || nodeX >= mazeSize.x || nodeY < 0 || nodeY >= mazeSize.y || Mathf.Abs(x) == Mathf.Abs(y))
+                {
+                    var newNode = new Node(new Vector2Int(nodeX, nodeY), null, 0, 0);
+                    results.Add(newNode);
+                }
             }
         }
-        return result;
+        return results;
     }
 
-    private int GetDistance(Node nodeA, Node nodeB) {
-        var dstX = Mathf.Abs(nodeA.position.x - nodeB.position.x);
-        var dstY = Mathf.Abs(nodeA.position.y - nodeB.position.y);
+    private int GetDistance(Vector2Int nodeA, Vector2Int nodeB) {
+        var dstX = Mathf.Abs(nodeA.x - nodeB.x);
+        var dstY = Mathf.Abs(nodeA.y - nodeB.y);
 
         if (dstX > dstY)
         {
