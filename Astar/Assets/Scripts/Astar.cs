@@ -21,14 +21,13 @@ public class Astar
         
         var startNode = new Node(startPos, null, 0, 0);
         openNodes.Add(startNode);
-
+        
         while (openNodes.Count != 0)
         {
             var currentNode = openNodes.OrderBy(node => node.FScore).First();
-
             openNodes.Remove(currentNode);
             closedNodes.Add(currentNode);
-            
+
             if (currentNode.position == endPos)
             {
                 var path = new List<Vector2Int>();
@@ -45,21 +44,31 @@ public class Astar
             }
 
             var gridDimensions = new Vector2Int(grid.GetLength(0), grid.GetLength(1));
-            foreach (var neighbour in GetNeighbours(currentNode, gridDimensions))
+            var neighbours = GetNeighbours(currentNode, gridDimensions);
+            var neighboursChecked = 0;
+            foreach (var neighbour in neighbours)
             {
-                if (closedNodes.Contains(neighbour) || IsSeparatedByWall(grid[currentNode.position.x, currentNode.position.y], grid[neighbour.position.x, neighbour.position.y]))
+                var currentCell = grid[currentNode.position.x, currentNode.position.y];
+                var neighbourCell = grid[neighbour.position.x, neighbour.position.y];
+                if (closedNodes.Any(node => node.position == neighbour.position) || IsSeparatedByWall(currentCell, neighbourCell))
                 {
+                    neighboursChecked++;
                     continue;
                 }
 
+                if (neighboursChecked >= neighbours.Count)
+                {
+                    return null;
+                }
+
                 var costToNeighbour = (int)currentNode.GScore + GetDistance(currentNode.position, neighbour.position);
-                if (costToNeighbour < neighbour.GScore || !openNodes.Contains(neighbour))
+                if (costToNeighbour < neighbour.GScore || openNodes.All(node => node.position != neighbour.position))
                 {
                     neighbour.GScore = costToNeighbour;
                     neighbour.HScore = GetDistance(neighbour.position, endPos);
                     neighbour.parent = currentNode;
 
-                    if (!openNodes.Contains(neighbour))
+                    if (openNodes.All(node => node.position != neighbour.position))
                     {
                         openNodes.Add(neighbour);
                     }
@@ -72,7 +81,6 @@ public class Astar
 
     private bool IsSeparatedByWall(Cell currentCell, Cell neighbour)
     {
-
         if (currentCell.gridPosition.x > neighbour.gridPosition.x && currentCell.HasWall(Wall.LEFT))
         {
             return true;
@@ -98,10 +106,6 @@ public class Astar
         {
             for (var y = -1; y < 2; y++)
             {
-                if (x == 0 && y == 0)
-                {
-                    continue;
-                }
                 var nodeX = node.position.x + x;
                 var nodeY = node.position.y + y;
                 
