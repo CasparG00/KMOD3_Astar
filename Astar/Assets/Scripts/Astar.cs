@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
@@ -16,66 +14,52 @@ public class Astar
     /// <param name="grid"></param>
     /// <returns></returns>
 
-    private List<Node> openNodes = new();
-    private HashSet<Node> closedNodes = new();
-
     public List<Vector2Int> FindPathToTarget(Vector2Int startPos, Vector2Int endPos, Cell[,] grid)
-    {
-        //Add start node to the open list
+    { 
+        List<Node> openNodes = new();
+        HashSet<Node> closedNodes = new();
+        
         var startNode = new Node(startPos, null, 0, 0);
         openNodes.Add(startNode);
 
-        while (openNodes.Count > 0)
+        while (openNodes.Count != 0)
         {
             var currentNode = openNodes.OrderBy(node => node.FScore).First();
-            Debug.Log(openNodes.Count);
 
-            //Found Goal
+            openNodes.Remove(currentNode);
+            closedNodes.Add(currentNode);
+            
             if (currentNode.position == endPos)
             {
                 var path = new List<Vector2Int>();
-                var currentPos = endPos;
-
-                while (currentPos != startPos)
+                var currentPathNode = currentNode;
+                
+                while (currentPathNode != startNode)
                 {
-                    path.Add(currentPos);
-                    foreach (var node in closedNodes.Where(node => node.position == currentPos))
-                    {
-                        currentPos = node.parent.position;
-                    }
+                    path.Add(currentPathNode.position);
+                    currentPathNode = currentPathNode.parent;
                 }
-
+                
                 path.Reverse();
                 return path;
             }
 
-            foreach (var node in openNodes)
+            var gridDimensions = new Vector2Int(grid.GetLength(0), grid.GetLength(1));
+            foreach (var neighbour in GetNeighbours(currentNode, gridDimensions))
             {
-                if (!(node.FScore <= currentNode.FScore)) continue;
-                if (node.HScore < currentNode.HScore)
-                {
-                    currentNode = node;
-                }
-            }
-            
-            openNodes.Remove(currentNode);
-            closedNodes.Add(currentNode);
-
-            foreach (var neighbour in GetNeighbours(currentNode, new Vector2Int(grid.GetLength(0), grid.GetLength(1))))
-            {
-                if (closedNodes.Any(node => node.position == neighbour.position))
+                if (closedNodes.Contains(neighbour) || IsSeparatedByWall(grid[currentNode.position.x, currentNode.position.y], grid[neighbour.position.x, neighbour.position.y]))
                 {
                     continue;
                 }
 
-                var newScore = currentNode.GScore + GetDistance(currentNode.position, neighbour.position);
-                if (!(newScore < neighbour.GScore) && openNodes.Any(node => node.position == neighbour.position)) continue;
+                var costToNeighbour = (int)currentNode.GScore + GetDistance(currentNode.position, neighbour.position);
+                if (costToNeighbour < neighbour.GScore || !openNodes.Contains(neighbour))
                 {
-                    neighbour.GScore = newScore;
+                    neighbour.GScore = costToNeighbour;
                     neighbour.HScore = GetDistance(neighbour.position, endPos);
                     neighbour.parent = currentNode;
 
-                    if (openNodes.All(node => node.position != neighbour.position))
+                    if (!openNodes.Contains(neighbour))
                     {
                         openNodes.Add(neighbour);
                     }
@@ -85,7 +69,27 @@ public class Astar
 
         return null;
     }
-    
+
+    private bool IsSeparatedByWall(Cell currentCell, Cell neighbour)
+    {
+
+        if (currentCell.gridPosition.x > neighbour.gridPosition.x && currentCell.HasWall(Wall.LEFT))
+        {
+            return true;
+        } if (currentCell.gridPosition.x < neighbour.gridPosition.x && currentCell.HasWall(Wall.RIGHT))
+        {
+            return true;
+        } if (currentCell.gridPosition.y > neighbour.gridPosition.y && currentCell.HasWall(Wall.DOWN))
+        {
+            return true;
+        } if (currentCell.gridPosition.y < neighbour.gridPosition.y && currentCell.HasWall(Wall.UP))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     private List<Node> GetNeighbours(Node node, Vector2Int mazeSize)
     {
         var results = new List<Node>();
@@ -103,9 +107,10 @@ public class Astar
                 
                 if (nodeX < 0 || nodeX >= mazeSize.x || nodeY < 0 || nodeY >= mazeSize.y || Mathf.Abs(x) == Mathf.Abs(y))
                 {
-                    var newNode = new Node(new Vector2Int(nodeX, nodeY), null, 0, 0);
-                    results.Add(newNode);
+                    continue;
                 }
+                var newNode = new Node(new Vector2Int(nodeX, nodeY), null, 0, 0);
+                results.Add(newNode);
             }
         }
         return results;
